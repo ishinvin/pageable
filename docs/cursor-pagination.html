@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursor Pagination - pageable</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a class="logo" href="index.html">pageable</a>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+      <li><a href="offset-pagination.html">Offset Pagination</a></li>
+      <li><a href="cursor-pagination.html" class="active">Cursor Pagination</a></li>
+      <li><a href="sorting.html">Sorting</a></li>
+      <li><a href="api-reference.html">API Reference</a></li>
+    </ul>
+    <div class="github">
+      <a href="https://github.com/ishinvin/pageable">GitHub</a>
+    </div>
+  </nav>
+  <main>
+    <h1>Cursor-Based Pagination</h1>
+    <p>Efficient, consistent pagination using opaque cursor tokens. Ideal for feeds, infinite scroll, and real-time data.</p>
+
+    <h2>Query Parameters</h2>
+    <table>
+      <thead><tr><th>Parameter</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>cursor</code></td><td>&mdash;</td><td>Encoded cursor token (empty for first page)</td></tr>
+        <tr><td><code>size</code></td><td>10</td><td>Items per page (max 1000)</td></tr>
+        <tr><td><code>sort</code></td><td>&mdash;</td><td>Sort field: <code>field,direction</code> (repeatable)</td></tr>
+      </tbody>
+    </table>
+    <p>Example: <code>?cursor=eyJ2IjoiNDIiLCJkIjoibmV4dCJ9&amp;size=25</code></p>
+
+    <h2>Parsing Requests</h2>
+    <h3>From Query Parameters</h3>
+<pre><code>func listPosts(w http.ResponseWriter, r *http.Request) {
+    req := pageable.CursorRequestFromQuery(r.URL.Query()).
+        SortableFields("id", "created_at").
+        WithDefaultSort(pageable.Sort{Field: "created_at", Direction: pageable.DESC})
+}</code></pre>
+
+    <h3>Manual Construction</h3>
+<pre><code>req := pageable.NewCursorRequest("", 25, nil) // first page, 25 items</code></pre>
+
+    <h2>Decoding Cursors</h2>
+<pre><code>cursorData, err := req.DecodedCursor()
+if err != nil {
+    http.Error(w, "invalid cursor", http.StatusBadRequest)
+    return
+}
+
+// cursorData.Value     — primary cursor value (e.g., an ID)
+// cursorData.Direction — "next" or "prev"
+// cursorData.Extra     — additional fields for compound cursors</code></pre>
+    <p>For the first page (no cursor), <code>DecodedCursor()</code> returns an empty <code>CursorData</code> with no error.</p>
+
+    <h2>Database Helpers</h2>
+<pre><code>req.Size        // requested page size (e.g., 25)
+req.Limit()     // Size + 1 (e.g., 26) — fetch one extra to detect hasNext
+req.OrderBy()   // "created_at desc"
+req.HasCursor() // true if a cursor was provided</code></pre>
+    <p>The <code>Limit()</code> method returns <code>Size + 1</code> because cursor pagination detects whether more items exist by fetching one extra row, avoiding a separate COUNT query.</p>
+
+    <h2>Cursor Direction</h2>
+    <p>Direction is encoded inside the cursor token itself via <code>CursorData.Direction</code>:</p>
+<pre><code>// Encode a "next page" cursor
+nextCursor, _ := pageable.EncodeCursor(pageable.CursorData{
+    Value:     fmt.Sprintf("%d", lastItem.ID),
+    Direction: pageable.Next,
+})
+
+// Encode a "previous page" cursor
+prevCursor, _ := pageable.EncodeCursor(pageable.CursorData{
+    Value:     fmt.Sprintf("%d", firstItem.ID),
+    Direction: pageable.Prev,
+})</code></pre>
+    <p>When decoding, check the direction to adjust your query:</p>
+<pre><code>cursorData, _ := req.DecodedCursor()
+
+switch cursorData.Direction {
+case pageable.Next:
+    // WHERE id > cursorData.Value ORDER BY id ASC
+case pageable.Prev:
+    // WHERE id &lt; cursorData.Value ORDER BY id DESC
+default:
+    // First page — no cursor filter
+}</code></pre>
+
+    <h2>Building Responses</h2>
+<pre><code>posts := queryPosts(cursorData, req.Limit(), req.OrderBy())
+
+hasNext := len(posts) > req.Size
+if hasNext {
+    posts = posts[:req.Size]
+}
+
+// Build next and prev cursors
+var nextCursor, prevCursor string
+if len(posts) > 0 {
+    if hasNext {
+        last := posts[len(posts)-1]
+        nextCursor, _ = pageable.EncodeCursor(pageable.CursorData{
+            Value:     fmt.Sprintf("%d", last.ID),
+            Direction: pageable.Next,
+        })
+    }
+    if req.HasCursor() {
+        first := posts[0]
+        prevCursor, _ = pageable.EncodeCursor(pageable.CursorData{
+            Value:     fmt.Sprintf("%d", first.ID),
+            Direction: pageable.Prev,
+        })
+    }
+}
+
+page := pageable.NewCursorPage(posts, nextCursor, prevCursor, hasNext, req.HasCursor(), req.Size)</code></pre>
+
+    <h3>Response Type</h3>
+<pre><code>type CursorPage[T any] struct {
+    Items    []T                `json:"items"`
+    Metadata CursorPageMetadata `json:"metadata"`
+}
+
+type CursorPageMetadata struct {
+    NextCursor string `json:"nextCursor"`
+    PrevCursor string `json:"prevCursor"`
+    HasNext    bool   `json:"hasNext"`
+    HasPrev    bool   `json:"hasPrev"`
+    Size       int    `json:"size"`
+}</code></pre>
+
+    <h3>JSON Output</h3>
+<pre><code>{
+  "items": [
+    {"id": 42, "title": "Hello"},
+    {"id": 43, "title": "World"}
+  ],
+  "metadata": {
+    "nextCursor": "eyJ2IjoiNDMiLCJkIjoibmV4dCJ9",
+    "prevCursor": "eyJ2IjoiNDIiLCJkIjoicHJldiJ9",
+    "hasNext": true,
+    "hasPrev": true,
+    "size": 25
+  }
+}</code></pre>
+
+    <h2>Compound Cursors</h2>
+    <p>For stable ordering across non-unique fields (e.g., <code>created_at</code> + <code>id</code>), use the <code>Extra</code> field:</p>
+<pre><code>// Encode
+cursor, _ := pageable.EncodeCursor(pageable.CursorData{
+    Value:     fmt.Sprintf("%d", lastItem.ID),
+    Direction: pageable.Next,
+    Extra:     map[string]string{"created_at": "2024-01-15T10:30:00Z"},
+})
+
+// Decode via CursorRequest
+req := pageable.NewCursorRequest(cursor, 25, nil)
+data, _ := req.DecodedCursor()
+// data.Value == "42"
+// data.Direction == "next"
+// data.Extra["created_at"] == "2024-01-15T10:30:00Z"</code></pre>
+    <p>Use compound cursors when your sort key is not unique:</p>
+<pre><code>// WHERE (created_at, id) > ($1, $2) ORDER BY created_at, id
+query := `SELECT * FROM posts
+    WHERE (created_at, id) > ($1, $2)
+    ORDER BY created_at ASC, id ASC
+    LIMIT $3`
+rows, err := db.Query(query, data.Extra["created_at"], data.Value, req.Limit())</code></pre>
+
+    <h2>Full Example</h2>
+<pre><code>package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "net/http"
+
+    "github.com/ishinvin/pageable"
+)
+
+type Post struct {
+    ID    int    `json:"id"`
+    Title string `json:"title"`
+}
+
+func listPosts(w http.ResponseWriter, r *http.Request) {
+    req := pageable.CursorRequestFromQuery(r.URL.Query()).
+        SortableFields("id", "created_at").
+        WithDefaultSort(pageable.Sort{Field: "id", Direction: pageable.ASC})
+
+    var posts []Post
+    if req.HasCursor() {
+        cursorData, err := req.DecodedCursor()
+        if err != nil {
+            http.Error(w, "invalid cursor", http.StatusBadRequest)
+            return
+        }
+        switch cursorData.Direction {
+        case pageable.Prev:
+            posts = queryPostsBefore(cursorData.Value, req.Limit(), req.OrderBy())
+        default:
+            posts = queryPostsAfter(cursorData.Value, req.Limit(), req.OrderBy())
+        }
+    } else {
+        posts = queryPosts(req.Limit(), req.OrderBy())
+    }
+
+    hasNext := len(posts) > req.Size
+    if hasNext {
+        posts = posts[:req.Size]
+    }
+
+    var nextCursor, prevCursor string
+    if len(posts) > 0 {
+        if hasNext {
+            last := posts[len(posts)-1]
+            nextCursor, _ = pageable.EncodeCursor(pageable.CursorData{
+                Value:     fmt.Sprintf("%d", last.ID),
+                Direction: pageable.Next,
+            })
+        }
+        if req.HasCursor() {
+            first := posts[0]
+            prevCursor, _ = pageable.EncodeCursor(pageable.CursorData{
+                Value:     fmt.Sprintf("%d", first.ID),
+                Direction: pageable.Prev,
+            })
+        }
+    }
+
+    page := pageable.NewCursorPage(posts, nextCursor, prevCursor, hasNext, req.HasCursor(), req.Size)
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(page)
+}</code></pre>
+
+    <footer>MIT License &copy; pageable</footer>
+  </main>
+</body>
+</html>

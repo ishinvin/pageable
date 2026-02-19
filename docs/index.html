@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pageable - Go Pagination Library</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a class="logo" href="index.html">pageable</a>
+    <ul>
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+      <li><a href="offset-pagination.html">Offset Pagination</a></li>
+      <li><a href="cursor-pagination.html">Cursor Pagination</a></li>
+      <li><a href="sorting.html">Sorting</a></li>
+      <li><a href="api-reference.html">API Reference</a></li>
+    </ul>
+    <div class="github">
+      <a href="https://github.com/ishinvin/pageable">GitHub</a>
+    </div>
+  </nav>
+  <main>
+    <h1>pageable</h1>
+    <p>A Go library for REST API pagination. Supports offset-based and cursor-based pagination with generic responses. Zero dependencies.</p>
+
+    <h2>Features</h2>
+    <ul>
+      <li><strong>Zero dependencies</strong> &mdash; only Go standard library</li>
+      <li><strong>Framework-agnostic</strong> &mdash; works with <code>net/http</code>, Gin, Echo, Chi, Fiber, or any framework</li>
+      <li><strong>Type-safe generics</strong> &mdash; <code>Page[T]</code> and <code>CursorPage[T]</code> for compile-time safety</li>
+      <li><strong>Offset &amp; cursor pagination</strong> &mdash; choose what fits your use case</li>
+      <li><strong>Flexible sorting</strong> &mdash; <code>?sort=name,desc&amp;sort=id,asc</code></li>
+      <li><strong>Sort safety</strong> &mdash; whitelist allowed sort fields to prevent SQL injection</li>
+      <li><strong>Clamping over errors</strong> &mdash; invalid inputs get sensible defaults, never errors</li>
+      <li><strong>SQL-ready helpers</strong> &mdash; <code>Offset()</code>, <code>Limit()</code>, <code>OrderBy()</code> for direct use in queries</li>
+    </ul>
+
+    <h2>Quick Example</h2>
+<pre><code>func listUsers(w http.ResponseWriter, r *http.Request) {
+    req := pageable.PageRequestFromQuery(r.URL.Query()).
+        SortableFields("id", "name", "created_at").
+        WithDefaultSort(pageable.Sort{Field: "id", Direction: pageable.ASC})
+
+    users, total := queryUsers(req.Offset(), req.Limit(), req.OrderBy())
+
+    page := pageable.NewPage(users, req, total)
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(page)
+}</code></pre>
+
+<pre><code>{
+  "items": [
+    {"id": 21, "name": "Alice"},
+    {"id": 22, "name": "Bob"}
+  ],
+  "metadata": {
+    "page": 2,
+    "size": 20,
+    "totalItems": 95,
+    "totalPages": 5
+  }
+}</code></pre>
+
+    <h2>Requirements</h2>
+    <p>Go 1.21+</p>
+
+    <footer>MIT License &copy; pageable</footer>
+  </main>
+</body>
+</html>

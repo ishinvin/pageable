@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started - pageable</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a class="logo" href="index.html">pageable</a>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="getting-started.html" class="active">Getting Started</a></li>
+      <li><a href="offset-pagination.html">Offset Pagination</a></li>
+      <li><a href="cursor-pagination.html">Cursor Pagination</a></li>
+      <li><a href="sorting.html">Sorting</a></li>
+      <li><a href="api-reference.html">API Reference</a></li>
+    </ul>
+    <div class="github">
+      <a href="https://github.com/ishinvin/pageable">GitHub</a>
+    </div>
+  </nav>
+  <main>
+    <h1>Getting Started</h1>
+
+    <h2>Installation</h2>
+<pre><code>go get github.com/ishinvin/pageable</code></pre>
+    <p>Requires <strong>Go 1.21+</strong> (uses generics).</p>
+
+    <h2>Import</h2>
+<pre><code>import "github.com/ishinvin/pageable"</code></pre>
+
+    <h2>Choose Your Pagination Style</h2>
+    <table>
+      <thead>
+        <tr><th>Style</th><th>Best For</th><th>Trade-offs</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="offset-pagination.html">Offset-based</a></td>
+          <td>Admin panels, dashboards, "jump to page N"</td>
+          <td>Requires COUNT query; inconsistent on live data</td>
+        </tr>
+        <tr>
+          <td><a href="cursor-pagination.html">Cursor-based</a></td>
+          <td>Feeds, infinite scroll, real-time data</td>
+          <td>No page jumping; more efficient at scale</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Defaults</h2>
+    <table>
+      <thead>
+        <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>DefaultPage</code></td><td>1</td><td>Default page number (1-indexed)</td></tr>
+        <tr><td><code>DefaultSize</code></td><td>10</td><td>Default items per page</td></tr>
+        <tr><td><code>MaxSize</code></td><td>1000</td><td>Maximum allowed page size</td></tr>
+        <tr><td><code>DefaultCursorSize</code></td><td>10</td><td>Default cursor page size</td></tr>
+        <tr><td><code>MaxCursorSize</code></td><td>1000</td><td>Maximum cursor page size</td></tr>
+      </tbody>
+    </table>
+
+    <footer>MIT License &copy; pageable</footer>
+  </main>
+</body>
+</html>

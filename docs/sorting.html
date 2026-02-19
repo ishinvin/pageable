@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorting - pageable</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a class="logo" href="index.html">pageable</a>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+      <li><a href="offset-pagination.html">Offset Pagination</a></li>
+      <li><a href="cursor-pagination.html">Cursor Pagination</a></li>
+      <li><a href="sorting.html" class="active">Sorting</a></li>
+      <li><a href="api-reference.html">API Reference</a></li>
+    </ul>
+    <div class="github">
+      <a href="https://github.com/ishinvin/pageable">GitHub</a>
+    </div>
+  </nav>
+  <main>
+    <h1>Sorting</h1>
+    <p>Sort parameters use <code>field,direction</code> format. Multiple sort parameters are supported.</p>
+
+    <h2>Query Format</h2>
+<pre><code>?sort=name,desc&amp;sort=id,asc</code></pre>
+    <p>Multiple <code>sort</code> parameters are supported. Direction is optional and defaults to <code>asc</code>.</p>
+
+    <h2>Parsing</h2>
+    <h3>Multiple Sorts</h3>
+<pre><code>sorts := pageable.ParseSorts([]string{"name,desc", "id,asc"})
+// [{name desc} {id asc}]</code></pre>
+
+    <h3>Single Sort</h3>
+<pre><code>sort := pageable.ParseSort("name,desc")
+// &amp;Sort{Field: "name", Direction: DESC}
+
+sort := pageable.ParseSort("name")
+// &amp;Sort{Field: "name", Direction: ASC}  (default)</code></pre>
+
+    <h2>Sort Safety</h2>
+    <p>Always whitelist sort fields before using them in SQL:</p>
+<pre><code>req := pageable.PageRequestFromQuery(r.URL.Query()).
+    SortableFields("id", "name", "created_at")</code></pre>
+    <p><code>SortableFields</code> removes any sort field not in the allowed list. This prevents users from injecting arbitrary column names into your queries.</p>
+    <p>Field names are also validated to only contain safe SQL identifier characters (letters, digits, underscores, and dots).</p>
+
+    <h2>Default Sort</h2>
+    <p>Apply a fallback sort when no valid sorts are provided:</p>
+<pre><code>req := pageable.PageRequestFromQuery(r.URL.Query()).
+    SortableFields("id", "name", "created_at").
+    WithDefaultSort(pageable.Sort{Field: "id", Direction: pageable.ASC})</code></pre>
+
+    <h2>OrderBy Helper</h2>
+    <p>Generate an ORDER BY clause string:</p>
+<pre><code>req.OrderBy()
+// "name desc, id asc"  (from query params)
+// "id asc"             (fallback when no sort provided)
+// ""                   (when no sorts at all)</code></pre>
+
+    <h2>Types</h2>
+<pre><code>type Direction string
+
+const (
+    ASC  Direction = "asc"
+    DESC Direction = "desc"
+)
+
+type Sort struct {
+    Field     string
+    Direction Direction
+}</code></pre>
+    <p><code>Sort.String()</code> returns <code>"field,direction"</code> format: <code>"name,desc"</code>.</p>
+
+    <footer>MIT License &copy; pageable</footer>
+  </main>
+</body>
+</html>

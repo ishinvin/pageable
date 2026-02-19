@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offset Pagination - pageable</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a class="logo" href="index.html">pageable</a>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+      <li><a href="offset-pagination.html" class="active">Offset Pagination</a></li>
+      <li><a href="cursor-pagination.html">Cursor Pagination</a></li>
+      <li><a href="sorting.html">Sorting</a></li>
+      <li><a href="api-reference.html">API Reference</a></li>
+    </ul>
+    <div class="github">
+      <a href="https://github.com/ishinvin/pageable">GitHub</a>
+    </div>
+  </nav>
+  <main>
+    <h1>Offset-Based Pagination</h1>
+    <p>Classic page-number pagination with total count metadata.</p>
+
+    <h2>Query Parameters</h2>
+    <table>
+      <thead><tr><th>Parameter</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>page</code></td><td>1</td><td>Page number (1-indexed)</td></tr>
+        <tr><td><code>size</code></td><td>10</td><td>Items per page (max 1000)</td></tr>
+        <tr><td><code>sort</code></td><td>&mdash;</td><td>Sort field: <code>field,direction</code> (repeatable)</td></tr>
+      </tbody>
+    </table>
+    <p>Example: <code>?page=2&amp;size=20&amp;sort=name,desc&amp;sort=id,asc</code></p>
+
+    <h2>Parsing Requests</h2>
+    <h3>From Query Parameters</h3>
+<pre><code>func listUsers(w http.ResponseWriter, r *http.Request) {
+    req := pageable.PageRequestFromQuery(r.URL.Query())
+    // req.Page = 2, req.Size = 20, req.Sort = [{name desc} {id asc}]
+}</code></pre>
+    <p>Invalid values are clamped to defaults &mdash; no error handling needed.</p>
+
+    <h3>Manual Construction</h3>
+<pre><code>req := pageable.NewPageRequest(1, 20, nil)</code></pre>
+
+    <h2>Sort Safety</h2>
+    <p>Whitelist allowed sort fields to prevent injection of arbitrary column names:</p>
+<pre><code>req := pageable.PageRequestFromQuery(r.URL.Query()).
+    SortableFields("id", "name", "created_at").
+    WithDefaultSort(pageable.Sort{Field: "id", Direction: pageable.ASC})</code></pre>
+    <ul>
+      <li><code>SortableFields(...)</code> removes any sort field not in the whitelist</li>
+      <li><code>WithDefaultSort(...)</code> applies a fallback sort when no valid sorts remain</li>
+    </ul>
+
+    <h2>Database Helpers</h2>
+<pre><code>req.Offset()  // (Page - 1) * Size, e.g. 20 for page 2, size 20
+req.Limit()   // Size, e.g. 20
+req.OrderBy() // "name desc, id asc"</code></pre>
+    <p>Use directly in SQL queries:</p>
+<pre><code>query := fmt.Sprintf(
+    "SELECT * FROM users ORDER BY %s LIMIT $1 OFFSET $2",
+    req.OrderBy(),
+)
+rows, err := db.Query(query, req.Limit(), req.Offset())</code></pre>
+    <div class="warning">Always use <code>SortableFields()</code> before passing <code>OrderBy()</code> to SQL queries to prevent SQL injection.</div>
+
+    <h2>Building Responses</h2>
+<pre><code>users, total := queryUsers(req.Offset(), req.Limit(), req.OrderBy())
+
+page := pageable.NewPage(users, req, total)</code></pre>
+    <p><code>NewPage</code> automatically computes <code>totalPages</code> using ceiling division. A nil items slice is converted to an empty slice so JSON serializes as <code>[]</code> not <code>null</code>.</p>
+
+    <h3>Response Type</h3>
+<pre><code>type Page[T any] struct {
+    Items    []T          `json:"items"`
+    Metadata PageMetadata `json:"metadata"`
+}
+
+type PageMetadata struct {
+    Page       int   `json:"page"`
+    Size       int   `json:"size"`
+    TotalItems int64 `json:"totalItems"`
+    TotalPages int   `json:"totalPages"`
+}</code></pre>
+
+    <h3>JSON Output</h3>
+<pre><code>{
+  "items": [
+    {"id": 21, "name": "Alice"},
+    {"id": 22, "name": "Bob"}
+  ],
+  "metadata": {
+    "page": 2,
+    "size": 20,
+    "totalItems": 95,
+    "totalPages": 5
+  }
+}</code></pre>
+
+    <h2>Full Example</h2>
+<pre><code>package main
+
+import (
+    "encoding/json"
+    "net/http"
+
+    "github.com/ishinvin/pageable"
+)
+
+type User struct {
+    ID   int    `json:"id"`
+    Name string `json:"name"`
+}
+
+func listUsers(w http.ResponseWriter, r *http.Request) {
+    req := pageable.PageRequestFromQuery(r.URL.Query()).
+        SortableFields("id", "name", "created_at").
+        WithDefaultSort(pageable.Sort{Field: "id", Direction: pageable.ASC})
+
+    users, total := queryUsers(req.Offset(), req.Limit(), req.OrderBy())
+
+    page := pageable.NewPage(users, req, total)
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(page)
+}</code></pre>
+
+    <footer>MIT License &copy; pageable</footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# https://lefthook.dev/configuration/
+
+pre-commit:
+  jobs:
+    - name: lint
+      glob: "*.go"
+      run: make lint
+
+pre-push:
+  jobs:
+    - name: check
+      glob: "*.go"
+      run: make check

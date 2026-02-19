@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Reference - pageable</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a class="logo" href="index.html">pageable</a>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+      <li><a href="offset-pagination.html">Offset Pagination</a></li>
+      <li><a href="cursor-pagination.html">Cursor Pagination</a></li>
+      <li><a href="sorting.html">Sorting</a></li>
+      <li><a href="api-reference.html" class="active">API Reference</a></li>
+    </ul>
+    <div class="github">
+      <a href="https://github.com/ishinvin/pageable">GitHub</a>
+    </div>
+  </nav>
+  <main>
+    <h1>API Reference</h1>
+
+    <h2>Constants</h2>
+<pre><code>const (
+    DefaultPage       = 1
+    DefaultSize       = 10
+    MaxSize           = 1000
+    DefaultCursorSize = 10
+    MaxCursorSize     = 1000
+)</code></pre>
+
+    <hr>
+
+    <h2>Sort</h2>
+    <h3>Types</h3>
+<pre><code>type Direction string
+
+const (
+    ASC  Direction = "asc"
+    DESC Direction = "desc"
+)
+
+type Sort struct {
+    Field     string
+    Direction Direction
+}</code></pre>
+
+    <h3>Functions</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ParseSort</code></td><td><code>(raw string) *Sort</code></td><td>Parse a single <code>"field,direction"</code> string</td></tr>
+        <tr><td><code>ParseSorts</code></td><td><code>(raw []string) []Sort</code></td><td>Parse multiple sort strings</td></tr>
+        <tr><td><code>Sort.String</code></td><td><code>() string</code></td><td>Returns <code>"field,direction"</code> format</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>PageRequest</h2>
+    <h3>Type</h3>
+<pre><code>type PageRequest struct {
+    Page int
+    Size int
+    Sort []Sort
+}</code></pre>
+
+    <h3>Constructors</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>NewPageRequest</code></td><td><code>(page, size int, sort []Sort) PageRequest</code></td><td>Create with clamping</td></tr>
+        <tr><td><code>PageRequestFromQuery</code></td><td><code>(values url.Values) PageRequest</code></td><td>Parse from query params</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Methods</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>Offset</code></td><td><code>() int</code></td><td><code>(Page - 1) * Size</code></td></tr>
+        <tr><td><code>Limit</code></td><td><code>() int</code></td><td>Returns <code>Size</code></td></tr>
+        <tr><td><code>SortableFields</code></td><td><code>(fields ...string) PageRequest</code></td><td>Whitelist sort fields</td></tr>
+        <tr><td><code>WithDefaultSort</code></td><td><code>(sorts ...Sort) PageRequest</code></td><td>Set fallback sort</td></tr>
+        <tr><td><code>OrderBy</code></td><td><code>() string</code></td><td><code>"field dir, field dir"</code></td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Page[T]</h2>
+    <h3>Types</h3>
+<pre><code>type Page[T any] struct {
+    Items    []T          `json:"items"`
+    Metadata PageMetadata `json:"metadata"`
+}
+
+type PageMetadata struct {
+    Page       int   `json:"page"`
+    Size       int   `json:"size"`
+    TotalItems int64 `json:"totalItems"`
+    TotalPages int   `json:"totalPages"`
+}</code></pre>
+
+    <h3>Functions</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>NewPage</code></td><td><code>(items []T, request PageRequest, totalItems int64) Page[T]</code></td><td>Create with computed metadata</td></tr>
+        <tr><td><code>EmptyPage</code></td><td><code>(request PageRequest) Page[T]</code></td><td>Create empty page with zero results</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>CursorRequest</h2>
+    <h3>Type</h3>
+<pre><code>type CursorRequest struct {
+    Cursor string
+    Size   int
+    Sort   []Sort
+}</code></pre>
+
+    <h3>Constructors</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>NewCursorRequest</code></td><td><code>(cursor string, size int, sort []Sort) CursorRequest</code></td><td>Create with clamping</td></tr>
+        <tr><td><code>CursorRequestFromQuery</code></td><td><code>(values url.Values) CursorRequest</code></td><td>Parse from query params</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Methods</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>Limit</code></td><td><code>() int</code></td><td>Returns <code>Size + 1</code> (fetch extra to detect hasNext)</td></tr>
+        <tr><td><code>HasCursor</code></td><td><code>() bool</code></td><td>True if cursor is non-empty</td></tr>
+        <tr><td><code>DecodedCursor</code></td><td><code>() (CursorData, error)</code></td><td>Decode the cursor token</td></tr>
+        <tr><td><code>SortableFields</code></td><td><code>(fields ...string) CursorRequest</code></td><td>Whitelist sort fields</td></tr>
+        <tr><td><code>WithDefaultSort</code></td><td><code>(sorts ...Sort) CursorRequest</code></td><td>Set fallback sort</td></tr>
+        <tr><td><code>OrderBy</code></td><td><code>() string</code></td><td><code>"field dir, field dir"</code></td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>CursorPage[T]</h2>
+    <h3>Types</h3>
+<pre><code>type CursorPage[T any] struct {
+    Items    []T                `json:"items"`
+    Metadata CursorPageMetadata `json:"metadata"`
+}
+
+type CursorPageMetadata struct {
+    NextCursor string `json:"nextCursor"`
+    PrevCursor string `json:"prevCursor"`
+    HasNext    bool   `json:"hasNext"`
+    HasPrev    bool   `json:"hasPrev"`
+    Size       int    `json:"size"`
+}</code></pre>
+
+    <h3>Functions</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>NewCursorPage</code></td><td><code>(items []T, nextCursor, prevCursor string, hasNext, hasPrev bool, size int) CursorPage[T]</code></td><td>Create cursor page</td></tr>
+        <tr><td><code>EmptyCursorPage</code></td><td><code>(size int) CursorPage[T]</code></td><td>Create empty cursor page</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Cursor Encoding</h2>
+    <h3>Types</h3>
+<pre><code>type CursorDirection string
+
+const (
+    Next CursorDirection = "next"
+    Prev CursorDirection = "prev"
+)
+
+type CursorData struct {
+    Value     string            `json:"v"`
+    Direction CursorDirection   `json:"d"`
+    Extra     map[string]string `json:"e"`
+}</code></pre>
+
+    <h3>Functions</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>EncodeCursor</code></td><td><code>(data CursorData) (string, error)</code></td><td>Encode to base64 URL-safe token</td></tr>
+        <tr><td><code>DecodeCursor</code></td><td><code>(cursor string) (CursorData, error)</code></td><td>Decode from base64 token</td></tr>
+      </tbody>
+    </table>
+
+    <footer>MIT License &copy; pageable</footer>
+  </main>
+</body>
+</html>
