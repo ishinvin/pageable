@@ -85,6 +85,7 @@ type Sort struct {
         <tr><td><code>Offset</code></td><td><code>() int</code></td><td><code>(Page - 1) * Size</code></td></tr>
         <tr><td><code>Limit</code></td><td><code>() int</code></td><td>Returns <code>Size</code></td></tr>
         <tr><td><code>SortableFields</code></td><td><code>(fields ...string) PageRequest</code></td><td>Whitelist sort fields</td></tr>
+        <tr><td><code>MapSortFields</code></td><td><code>(fieldMap map[string]string) PageRequest</code></td><td>Map user-facing field names to database columns</td></tr>
         <tr><td><code>WithDefaultSort</code></td><td><code>(sorts ...Sort) PageRequest</code></td><td>Set fallback sort</td></tr>
         <tr><td><code>OrderBy</code></td><td><code>() string</code></td><td><code>"field dir, field dir"</code></td></tr>
       </tbody>
@@ -142,6 +143,7 @@ type PageMetadata struct {
         <tr><td><code>HasCursor</code></td><td><code>() bool</code></td><td>True if cursor is non-empty</td></tr>
         <tr><td><code>DecodedCursor</code></td><td><code>() (CursorData, error)</code></td><td>Decode the cursor token</td></tr>
         <tr><td><code>SortableFields</code></td><td><code>(fields ...string) CursorRequest</code></td><td>Whitelist sort fields</td></tr>
+        <tr><td><code>MapSortFields</code></td><td><code>(fieldMap map[string]string) CursorRequest</code></td><td>Map user-facing field names to database columns</td></tr>
         <tr><td><code>WithDefaultSort</code></td><td><code>(sorts ...Sort) CursorRequest</code></td><td>Set fallback sort</td></tr>
         <tr><td><code>OrderBy</code></td><td><code>() string</code></td><td><code>"field dir, field dir"</code></td></tr>
       </tbody>

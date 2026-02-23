@@ -88,6 +88,23 @@ func filterSortsByFields(sorts []Sort, fields ...string) []Sort {
 	return filtered
 }
 
+// mapSortFields replaces sort field names using the provided mapping.
+// If a field has a mapping, it is replaced; otherwise the sort is kept as-is.
+func mapSortFields(sorts []Sort, fieldMap map[string]string) []Sort {
+	if len(sorts) == 0 || len(fieldMap) == 0 {
+		return sorts
+	}
+	mapped := make([]Sort, len(sorts))
+	for i, s := range sorts {
+		if to, ok := fieldMap[s.Field]; ok {
+			mapped[i] = Sort{Field: to, Direction: s.Direction}
+		} else {
+			mapped[i] = s
+		}
+	}
+	return mapped
+}
+
 // isSafeIdentifier checks that a field name contains only safe SQL identifier
 // characters: letters, digits, underscores, and dots (for table-qualified names like "posts.id").
 func isSafeIdentifier(s string) bool {

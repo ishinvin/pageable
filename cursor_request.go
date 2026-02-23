@@ -56,6 +56,14 @@ func (cr CursorRequest) SortableFields(fields ...string) CursorRequest {
 	return cr
 }
 
+// MapSortFields replaces sort field names using the provided mapping.
+// Use this to translate user-facing field names (e.g., "createdAt") to
+// database column names (e.g., "created_at"). Unmapped fields are kept as-is.
+func (cr CursorRequest) MapSortFields(fieldMap map[string]string) CursorRequest {
+	cr.Sort = mapSortFields(cr.Sort, fieldMap)
+	return cr
+}
+
 // WithDefaultSort sets the sort to the given defaults if no sort is set.
 // Has no effect if the request already has sorts from query parameters.
 func (cr CursorRequest) WithDefaultSort(sorts ...Sort) CursorRequest {

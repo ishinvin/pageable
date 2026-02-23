@@ -48,6 +48,18 @@ sort := pageable.ParseSort("name")
     <p><code>SortableFields</code> removes any sort field not in the allowed list. This prevents users from injecting arbitrary column names into your queries.</p>
     <p>Field names are also validated to only contain safe SQL identifier characters (letters, digits, underscores, and dots).</p>
 
+    <h2>Field Mapping</h2>
+    <p>Use <code>MapSortFields</code> to translate user-facing field names to database column names. This is useful when your API uses camelCase but your database uses snake_case:</p>
+<pre><code>req := pageable.PageRequestFromQuery(r.URL.Query()).
+    SortableFields("id", "name", "createdAt").
+    MapSortFields(map[string]string{
+        "createdAt": "created_at",
+    }).
+    WithDefaultSort(pageable.Sort{Field: "created_at", Direction: pageable.DESC})
+
+req.OrderBy() // "created_at desc, id asc"</code></pre>
+    <p>Fields without a mapping entry are kept as-is. Place <code>MapSortFields</code> after <code>SortableFields</code> so that filtering uses the user-facing names and mapping produces the database names.</p>
+
     <h2>Default Sort</h2>
     <p>Apply a fallback sort when no valid sorts are provided:</p>
 <pre><code>req := pageable.PageRequestFromQuery(r.URL.Query()).

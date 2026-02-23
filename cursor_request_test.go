@@ -167,6 +167,55 @@ func TestCursorRequestSortableFields(t *testing.T) {
 	}
 }
 
+func TestCursorRequestMapSortFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		sort     []Sort
+		fieldMap map[string]string
+		expected []Sort
+	}{
+		{
+			name:     "maps matching fields",
+			sort:     []Sort{{Field: "createdAt", Direction: DESC}, {Field: "id", Direction: ASC}},
+			fieldMap: map[string]string{"createdAt": "created_at"},
+			expected: []Sort{{Field: "created_at", Direction: DESC}, {Field: "id", Direction: ASC}},
+		},
+		{
+			name:     "nil sorts",
+			sort:     nil,
+			fieldMap: map[string]string{"createdAt": "created_at"},
+			expected: nil,
+		},
+		{
+			name:     "empty map returns sorts unchanged",
+			sort:     []Sort{{Field: "name", Direction: ASC}},
+			fieldMap: map[string]string{},
+			expected: []Sort{{Field: "name", Direction: ASC}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := CursorRequest{Size: 20, Sort: tt.sort}
+			req = req.MapSortFields(tt.fieldMap)
+			if tt.expected == nil {
+				if req.Sort != nil {
+					t.Errorf("Sort = %v, want nil", req.Sort)
+				}
+			} else {
+				if len(req.Sort) != len(tt.expected) {
+					t.Fatalf("Sort length = %d, want %d", len(req.Sort), len(tt.expected))
+				}
+				for i, s := range req.Sort {
+					if s.Field != tt.expected[i].Field || s.Direction != tt.expected[i].Direction {
+						t.Errorf("Sort[%d] = %v, want %v", i, s, tt.expected[i])
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestCursorRequestWithDefaultSort(t *testing.T) {
 	// Applies default when no sort is set
 	req := CursorRequest{Size: 20}

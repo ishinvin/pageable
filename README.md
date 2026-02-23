@@ -123,14 +123,17 @@ Sort parameters use `field,direction` format (repeatable):
 ?sort=name,desc&sort=id,asc
 ```
 
-`SortableFields` whitelists allowed fields to prevent SQL injection. `WithDefaultSort` provides a fallback when no sort is given.
+`SortableFields` whitelists allowed fields to prevent SQL injection. `WithDefaultSort` provides a fallback when no sort is given. `MapSortFields` translates user-facing field names to database column names.
 
 ```go
 req := pageable.PageRequestFromQuery(r.URL.Query()).
-    SortableFields("id", "name", "created_at").
-    WithDefaultSort(pageable.Sort{Field: "id", Direction: pageable.ASC})
+    SortableFields("id", "name", "createdAt").
+    MapSortFields(map[string]string{
+        "createdAt": "created_at",
+    }).
+    WithDefaultSort(pageable.Sort{Field: "created_at", Direction: pageable.DESC})
 
-req.OrderBy() // "name desc, id asc"
+req.OrderBy() // "created_at desc, id asc"
 ```
 
 ## Compound Cursors

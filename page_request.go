@@ -76,6 +76,14 @@ func (pr PageRequest) SortableFields(fields ...string) PageRequest {
 	return pr
 }
 
+// MapSortFields replaces sort field names using the provided mapping.
+// Use this to translate user-facing field names (e.g., "createdAt") to
+// database column names (e.g., "created_at"). Unmapped fields are kept as-is.
+func (pr PageRequest) MapSortFields(fieldMap map[string]string) PageRequest {
+	pr.Sort = mapSortFields(pr.Sort, fieldMap)
+	return pr
+}
+
 // WithDefaultSort sets the sort to the given defaults if no sort is set.
 // Has no effect if the request already has sorts from query parameters.
 func (pr PageRequest) WithDefaultSort(sorts ...Sort) PageRequest {
